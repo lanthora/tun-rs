@@ -48,13 +48,14 @@ fn main_entry(quit: Receiver<()>) -> Result<(), BoxError> {
         //         .unwrap(),
         //     64,
         // )
-        .address_with_prefix((10, 0, 0, 9), 24u8)
+        .address_with_prefix((10, 0, 0, 1), 24u8)
         //.destination((10, 0, 0, 1))
         .up();
 
     let dev = Arc::new(tun_rs::create(&config)?);
-	println!("{:?}",dev.broadcast());
-	dev.set_broadcast((10,0,0,9))?;
+	let r = ipnet::IpNet::new(IpAddr::from([10,0,0,1]), 24).unwrap().broadcast();
+	println!("{r} === {:?}",dev.broadcast());
+	//dev.set_broadcast((10,0,0,9))?;
     let dev_t = dev.clone();
     let _join = std::thread::spawn(move || {
         let mut buf = [0; 4096];
