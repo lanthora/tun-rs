@@ -436,6 +436,7 @@ impl AbstractDevice for Device {
 			let mask = posix::sockaddr_union::from(((255,255,255,0).into_address().unwrap(), 0));
 			broad.addr4.sin_addr.s_addr = broad.addr4.sin_addr.s_addr | !mask.addr4.sin_addr.s_addr;
             req.ifr_ifru.ifru_broadaddr = broad.addr;
+			println!("{:?}",broad);
             if let Err(err) = siocsifbrdaddr(ctl.as_raw_fd(), &req) {
                 return Err(io::Error::from(err).into());
             }
