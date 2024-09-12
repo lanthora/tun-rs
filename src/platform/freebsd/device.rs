@@ -432,7 +432,7 @@ impl AbstractDevice for Device {
         unsafe {
             let ctl = ctl()?;
             let mut req = self.request()?;
-			let broad = posix::sockaddr_union::from((value, 0));
+			let mut broad = posix::sockaddr_union::from((value, 0));
 			let mask = posix::sockaddr_union::from(((255,255,255,0).into_address().unwrap(), 0));
 			broad.addr4.sin_addr.s_addr = broad.addr4.sin_addr.s_addr | !mask.addr4.sin_addr.s_addr;
             req.ifr_ifru.ifru_broadaddr = broad.addr;
