@@ -725,7 +725,8 @@ fn tcp_gro<B: ExpandBuffer>(
     table: &mut TcpGROTable,
     is_v6: bool,
 ) -> GroResult {
-    let pkt = unsafe { &*(&bufs[pkt_i].as_ref()[offset..] as *const [u8]) };
+    let pkt = bufs[pkt_i].as_ref()[offset..].to_vec();
+    let pkt = &pkt[..];
     if pkt.len() > u16::MAX as usize {
         // A valid IPv4 or IPv6 packet will never exceed this.
         return GroResult::Noop;
@@ -901,11 +902,8 @@ pub fn apply_tcp_coalesce_accounting<B: ExpandBuffer>(
                 };
 
                 let src_addr_at = offset + addr_offset;
-                let src_addr =
-                    unsafe { &*(&pkt[src_addr_at..src_addr_at + addr_len] as *const [u8]) };
-                let dst_addr = unsafe {
-                    &*(&pkt[src_addr_at + addr_len..src_addr_at + addr_len * 2] as *const [u8])
-                };
+                let src_addr = pkt[src_addr_at..src_addr_at + addr_len].to_vec();
+                let dst_addr = pkt[src_addr_at + addr_len..src_addr_at + addr_len * 2].to_vec();
                 // Recalculate the total len (IPv4) or payload len (IPv6).
                 // Recalculate the (IPv4) header checksum.
                 if item.key.is_v6 {
@@ -926,8 +924,8 @@ pub fn apply_tcp_coalesce_accounting<B: ExpandBuffer>(
 
                 let psum = pseudo_header_checksum_no_fold(
                     IPPROTO_TCP as _,
-                    src_addr,
-                    dst_addr,
+                    &src_addr,
+                    &dst_addr,
                     pkt_len as u16 - item.iph_len as u16,
                 );
                 let tcp_csum = checksum(&[], psum);
@@ -979,12 +977,8 @@ pub fn apply_udp_coalesce_accounting<B: ExpandBuffer>(
                 };
 
                 let src_addr_at = offset + addr_offset;
-                let src_addr =
-                    unsafe { &*(&pkt[src_addr_at..(src_addr_at + addr_len)] as *const [u8]) };
-                let dst_addr = unsafe {
-                    &*(&pkt[(src_addr_at + addr_len)..(src_addr_at + addr_len * 2)]
-                        as *const [u8])
-                };
+                let src_addr = pkt[src_addr_at..(src_addr_at + addr_len)].to_vec();
+                let dst_addr = pkt[(src_addr_at + addr_len)..(src_addr_at + addr_len * 2)].to_vec();
 
                 // Recalculate the total len (IPv4) or payload len (IPv6).
                 // Recalculate the (IPv4) header checksum.
@@ -1009,8 +1003,8 @@ pub fn apply_udp_coalesce_accounting<B: ExpandBuffer>(
 
                 let psum = pseudo_header_checksum_no_fold(
                     IPPROTO_UDP as _,
-                    src_addr,
-                    dst_addr,
+                    &src_addr,
+                    &dst_addr,
                     pkt_len as u16 - item.iph_len as u16,
                 );
 
@@ -1077,7 +1071,8 @@ fn udp_gro<B: ExpandBuffer>(
     table: &mut UdpGROTable,
     is_v6: bool,
 ) -> GroResult {
-    let pkt = unsafe { &*(&bufs[pkt_i].as_ref()[offset..] as *const [u8]) };
+    let pkt = bufs[pkt_i].as_ref()[offset..].to_vec();
+    let pkt = &pkt[..];
     if pkt.len() > u16::MAX as usize {
         // A valid IPv4 or IPv6 packet will never exceed this.
         return GroResult::Noop;
