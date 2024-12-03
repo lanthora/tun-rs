@@ -167,6 +167,11 @@ impl Device {
                         if guid.is_none() {
                             guid.replace(hash_name(name));
                         }
+                        if config.platform_config.delete_reg {
+                            if let Err(e) = delete_reg(name) {
+                                log::warn!("delete_reg {e:?}")
+                            }
+                        }
                         break wintun::Adapter::create(&wintun, name, name, guid)?;
                     }
                 }
@@ -493,4 +498,66 @@ impl Tun {
             },
         }
     }
+}
+
+pub fn delete_reg(dev_name: &str) -> io::Result<()> {
+    use winreg::{enums::HKEY_LOCAL_MACHINE, enums::KEY_ALL_ACCESS, RegKey};
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let profiles_key = hklm.open_subkey_with_flags(
+        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\Profiles",
+        KEY_ALL_ACCESS,
+    )?;
+    let unmanaged_key = hklm.open_subkey_with_flags(
+        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\Signatures\\Unmanaged",
+        KEY_ALL_ACCESS,
+    )?;
+    for sub_key_name in profiles_key.enum_keys().filter_map(Result::ok) {
+        let sub_key = profiles_key.open_subkey(&sub_key_name)?;
+        match sub_key.get_value::<String, _>("ProfileName") {
+            Ok(profile_name) => {
+                if dev_name == profile_name {
+                    match profiles_key.delete_subkey_all(&sub_key_name) {
+                        Ok(_) => {
+                            log::info!("Successfully deleted Profiles sub_key: {}", sub_key_name)
+                        }
+                        Err(e) => {
+                            log::warn!("Failed to delete Profiles sub_key {}: {}", sub_key_name, e)
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!(
+                    "Failed to read ProfileName for sub_key {}: {}",
+                    sub_key_name,
+                    e
+                );
+            }
+        }
+    }
+    for sub_key_name in unmanaged_key.enum_keys().filter_map(Result::ok) {
+        let sub_key = unmanaged_key.open_subkey(&sub_key_name)?;
+        match sub_key.get_value::<String, _>("Description") {
+            Ok(description) => {
+                if dev_name == description {
+                    match unmanaged_key.delete_subkey_all(&sub_key_name) {
+                        Ok(_) => {
+                            log::info!("Successfully deleted Unmanaged sub_key: {}", sub_key_name)
+                        }
+                        Err(e) => {
+                            log::warn!("Failed to delete Unmanaged sub_key {}: {}", sub_key_name, e)
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!(
+                    "Failed to read Description for sub_key {}: {}",
+                    sub_key_name,
+                    e
+                );
+            }
+        }
+    }
+    Ok(())
 }

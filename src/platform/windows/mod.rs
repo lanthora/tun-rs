@@ -22,6 +22,7 @@ pub struct PlatformConfig {
     pub(crate) dns_servers: Option<Vec<IpAddr>>,
     pub(crate) ring_capacity: Option<u32>,
     pub(crate) metric: Option<u16>,
+    pub(crate) delete_reg: bool,
 }
 
 impl Default for PlatformConfig {
@@ -33,6 +34,7 @@ impl Default for PlatformConfig {
             dns_servers: None,
             ring_capacity: None,
             metric: None,
+            delete_reg: true,
         }
     }
 }
@@ -64,6 +66,11 @@ impl PlatformConfig {
 
     pub fn metric(&mut self, metric: u16) -> &mut Self {
         self.metric = Some(metric);
+        self
+    }
+    /// Delete the registry related to the current network card
+    pub fn delete_reg(&mut self, delete_reg: bool) -> &mut Self {
+        self.delete_reg = delete_reg;
         self
     }
 }
