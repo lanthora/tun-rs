@@ -31,15 +31,15 @@ async fn main_entry(mut quit: Receiver<()>) -> Result<(), BoxError> {
     let mut config = Configuration::default();
 
     config
-        .address_with_prefix((10, 0, 0, 9), 24)
+        .address_with_prefix((10, 0, 0, 119), 24)
         // will add 0.0.0.0 to interface on windows platform, which route all traffic here
         //.destination((10, 0, 0, 1))
         .up();
 
-    #[cfg(target_os = "windows")]
-    config.platform_config(|config| {
-        config.device_guid(9099482345783245345345_u128);
-    });
+    // #[cfg(target_os = "windows")]
+    // config.platform_config(|config| {
+    //     config.device_guid(9099482345783245345345_u128);
+    // });
 
     let dev = tun_rs::create_as_async(&config)?;
     #[cfg(target_os = "macos")]

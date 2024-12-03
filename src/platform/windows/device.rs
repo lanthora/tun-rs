@@ -145,11 +145,10 @@ impl Device {
     pub fn new(config: &Configuration) -> Result<Self> {
         let layer = config.layer.unwrap_or(Layer::L3);
         let mut count = 0;
-
         let device = if layer == Layer::L3 {
             let wintun_file = &config.platform_config.wintun_file;
             let wintun = unsafe { load_from_path(wintun_file)? };
-
+            let mut attempts = 0;
             let adapter = loop {
                 let default_name = format!("tun{count}");
                 let name = config.name.as_deref().unwrap_or(&default_name);
@@ -172,7 +171,17 @@ impl Device {
                                 log::warn!("delete_reg {e:?}")
                             }
                         }
-                        break wintun::Adapter::create(&wintun, name, name, guid)?;
+                        match wintun::Adapter::create(&wintun, name, name, guid) {
+                            Ok(adapter) => break adapter,
+                            Err(e) => {
+                                if attempts > 3 {
+                                    Err(e)?
+                                } else {
+                                    count += 1;
+                                    attempts += 1;
+                                }
+                            }
+                        }
                     }
                 }
             };
@@ -511,6 +520,11 @@ pub fn delete_reg(dev_name: &str) -> io::Result<()> {
         "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\Signatures\\Unmanaged",
         KEY_ALL_ACCESS,
     )?;
+
+    // let network_key = hklm.open_subkey_with_flags(
+    //     "SYSTEM\\CurrentControlSet\\Control\\Network",
+    //     KEY_ALL_ACCESS,
+    // )?;
     for sub_key_name in profiles_key.enum_keys().filter_map(Result::ok) {
         let sub_key = profiles_key.open_subkey(&sub_key_name)?;
         match sub_key.get_value::<String, _>("ProfileName") {
@@ -559,5 +573,30 @@ pub fn delete_reg(dev_name: &str) -> io::Result<()> {
             }
         }
     }
+    // for sub_key_name1 in network_key.enum_keys().filter_map(Result::ok) {
+    //     if let Ok(sub_key1) = network_key.open_subkey(&sub_key_name1){
+    //         for sub_key_name2 in sub_key1.enum_keys().filter_map(Result::ok) {
+    //             if let Ok(sub_key2) = sub_key1.open_subkey(&sub_key_name2){
+    //                 for sub_key_name3 in sub_key2.enum_keys().filter_map(Result::ok) {
+    //                     if let Ok(sub_key3) = sub_key2.open_subkey(&sub_key_name3){
+    //                         if let Ok(name) = sub_key3.get_value::<String, _>("Name"){
+    //                             if dev_name == name {
+    //                                 match sub_key1.delete_subkey_all(&sub_key_name2) {
+    //                                     Ok(_) => {
+    //                                         log::info!("Successfully deleted Network sub_key: {}", sub_key_name2)
+    //                                     }
+    //                                     Err(e) => {
+    //                                         log::warn!("Failed to delete Network sub_key {}: {}", sub_key_name2, e)
+    //                                     }
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //
+    //             }
+    //         }
+    //     }
+    // }
     Ok(())
 }
