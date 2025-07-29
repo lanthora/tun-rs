@@ -102,7 +102,7 @@ impl WinTunAdapter {
             self.state.enable();
             return Err(e);
         }
-        _ = self.session.write().unwrap().take();
+        drop(self.session.write().unwrap().take());
         ffi::reset_event(self.event.as_raw_handle())
     }
 
@@ -358,7 +358,7 @@ impl TunDevice {
             let event = ffi::create_event()?;
 
             let win_tun = wintun_raw::wintun::new(wintun_path).map_err(io::Error::other)?;
-            wintun_log::set_default_logger_if_unset(&win_tun);
+            //wintun_log::set_default_logger_if_unset(&win_tun);
             let adapter = win_tun.WintunOpenAdapter(name_utf16.as_ptr());
             if adapter.is_null() {
                 Err(io::Error::last_os_error())?
@@ -412,7 +412,7 @@ impl TunDevice {
             let event = ffi::create_event()?;
 
             let win_tun = wintun_raw::wintun::new(wintun_path).map_err(io::Error::other)?;
-            wintun_log::set_default_logger_if_unset(&win_tun);
+            //wintun_log::set_default_logger_if_unset(&win_tun);
             //SAFETY: guid is a unique integer so transmuting either all zeroes or the user's preferred
             //guid to the wintun_raw guid type is safe and will allow the windows kernel to see our GUID
 
